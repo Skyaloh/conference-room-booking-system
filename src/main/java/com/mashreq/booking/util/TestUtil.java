@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 public class TestUtil {
 
@@ -24,5 +27,12 @@ public class TestUtil {
         mapper.registerModule(module);
 
         return mapper.writeValueAsBytes(object);
+    }
+
+    public static String formatInstantTime(Instant instant){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneId.systemDefault());
+        return formatter.format(instant);
+
     }
 }

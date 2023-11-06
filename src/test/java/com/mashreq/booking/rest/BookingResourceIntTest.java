@@ -4,6 +4,7 @@ package com.mashreq.booking.rest;
 import com.mashreq.booking.IntegrationTest;
 import com.mashreq.booking.domain.Booking;
 import com.mashreq.booking.repository.BookingRepository;
+import com.mashreq.booking.rest.errors.ExceptionTranslator;
 import com.mashreq.booking.rest.vm.BookingVM;
 import com.mashreq.booking.service.BookingService;
 import com.mashreq.booking.service.queryservice.BookingQueryService;
@@ -18,10 +19,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -35,7 +33,7 @@ public class BookingResourceIntTest {
 
     private static final Long DEFAULT_USER_ID = 1L;
     private static final int DEFAULT_NUMBER_OF_PEOPLE = 7;
-    private MockMvc restActivityTypeMockMvc;
+    private MockMvc restMockMvc;
 
     private static final Instant DEFAULT_START_TIME = Instant.now();
     private static final  Instant DEFAULT_END_TIME = Instant.now().plus( 15,ChronoUnit.MINUTES);
@@ -60,17 +58,15 @@ public class BookingResourceIntTest {
 
     private BookingVM bookingVM;
 
+    @Autowired
+    private ExceptionTranslator exceptionTranslator;
 
 
     public static BookingVM createBookingVM(){
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                .withZone(ZoneId.systemDefault());
-
-
         BookingVM bookingVM = new BookingVM();
-        bookingVM.setEndTime(formatter.format(DEFAULT_END_TIME));
-        bookingVM.setStartTime(formatter.format(DEFAULT_START_TIME));
+        bookingVM.setEndTime(TestUtil.formatInstantTime(DEFAULT_END_TIME));
+        bookingVM.setStartTime(TestUtil.formatInstantTime(DEFAULT_START_TIME));
         bookingVM.setNumberOfPeople(DEFAULT_NUMBER_OF_PEOPLE);
         bookingVM.setUserId(DEFAULT_USER_ID);
         return bookingVM;
@@ -84,10 +80,11 @@ public class BookingResourceIntTest {
     public void initTest() {
         MockitoAnnotations.openMocks(this);
         final BookingResource bookingResource = new BookingResource(bookingService,bookingQueryService);
-        this.restActivityTypeMockMvc =
+        this.restMockMvc =
                 MockMvcBuilders
                         .standaloneSetup(bookingResource)
                         .setCustomArgumentResolvers(pageableArgumentResolver)
+                        .setControllerAdvice(exceptionTranslator)
                         .setMessageConverters(jacksonMessageConverter)
                         .build();
     }
@@ -98,8 +95,8 @@ public class BookingResourceIntTest {
     void createBooking() throws Exception {
         int databaseSizeBeforeCreate = bookingRepository.findAll().size();
 
-        // Create the ActivityType
-        restActivityTypeMockMvc
+        // Create the Booking
+        restMockMvc
                 .perform(
                         post("/api/bookings")
                                 .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -112,5 +109,26 @@ public class BookingResourceIntTest {
         assertThat(bookingList).hasSize(databaseSizeBeforeCreate + 1);
         Booking testBooking = bookingList.get(bookingList.size() - 1);
         assertThat(testBooking.getNumberOfPeople()).isEqualTo(DEFAULT_NUMBER_OF_PEOPLE);
+    }
+
+    @Test
+    @Transactional
+    void createBookingWith_Incorrect_Date_Fails() throws Exception {
+        int databaseSizeBeforeCreate = bookingRepository.findAll().size();
+
+        bookingVM.setStartTime(TestUtil.formatInstantTime(DEFAULT_END_TIME.plus(1,ChronoUnit.DAYS)));
+
+        // Create the Booking
+        restMockMvc
+                .perform(
+                        post("/api/bookings")
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(TestUtil.convertObjectToJsonBytes(bookingVM))
+                )
+                .andExpect(status().isInternalServerError());
+
+        // Validate the Booking in the database
+        List<Booking> bookingList = bookingRepository.findAll();
+        assertThat(bookingList).hasSize(databaseSizeBeforeCreate);
     }
 }
