@@ -2,7 +2,6 @@ package com.mashreq.booking.service.queryservice;
 
 import com.mashreq.booking.domain.ConferenceRoom;
 import com.mashreq.booking.domain.ConferenceRoom_;
-import com.mashreq.booking.dto.BookingDTO;
 import com.mashreq.booking.dto.ConferenceRoomDTO;
 import com.mashreq.booking.mapper.ConferenceRoomMapper;
 import com.mashreq.booking.repository.ConferenceRoomRepository;
@@ -22,8 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

@@ -7,6 +7,7 @@ import com.mashreq.booking.rest.vm.BookingVM;
 import com.mashreq.booking.service.BookingService;
 import com.mashreq.booking.service.criteria.BookingCriteria;
 import com.mashreq.booking.service.queryservice.BookingQueryService;
+import com.mashreq.booking.util.HeaderUtil;
 import com.mashreq.booking.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,11 +37,13 @@ public class BookingResource {
     }
 
     @PostMapping("/bookings")
-    public ResponseEntity<BookingDTO> createBooking(@RequestBody BookingVM bookingVM) {
+    public ResponseEntity<BookingDTO> createBooking(@RequestBody BookingVM bookingVM) throws URISyntaxException {
         log.debug("REST request to save bookingDTO : {}", bookingVM);
 
         BookingDTO result = bookingService.bookRoom(bookingVM);
-        return ResponseEntity.ok().body(result);
+        return ResponseEntity.created(new URI("/api/bookings/" + result.getId()))
+                .headers(HeaderUtil.createEntityCreationAlert("",false, ENTITY_NAME,result.getId().toString()))
+                .body(result);
     }
 
     @GetMapping("/bookings/{id}")
